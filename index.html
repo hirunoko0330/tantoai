@@ -584,7 +584,6 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
   if (id === 'chat') {
     scrollToBottom();
-    document.getElementById('chatInput').focus();
   }
 }
 
@@ -772,6 +771,20 @@ function startChatWith(name) {
   document.getElementById('chatTantoName').textContent = name;
   document.getElementById('chatInput').placeholder = `${name}にメッセージ...`;
 
+  // Analyze message style
+  const avgLen = tantoMessages.reduce((sum, m) => sum + m.length, 0) / (tantoMessages.length || 1);
+  const multiLineRatio = tantoMessages.filter(m => m.includes('\n')).length / (tantoMessages.length || 1);
+  
+  let styleInstruction = '';
+  if (avgLen <= 20) {
+    styleInstruction = '【返信スタイル】短文でポンポン送るスタイル。1メッセージは10〜20文字程度。改行で複数に分けて送る。';
+  } else if (avgLen <= 50) {
+    styleInstruction = '【返信スタイル】中程度の長さ。1〜2文程度でテンポよく返す。';
+  } else {
+    styleInstruction = '【返信スタイル】長文スタイル。まとめて長めに返す。改行を使って読みやすくする。';
+  }
+  window._tantoStyleInstruction = styleInstruction;
+
   // Get greeting
   const greetings = tantoMessages.filter(m =>
     m.includes('おはよ') || m.includes('おつかれ') || m.includes('ひさしぶり') ||
@@ -877,7 +890,7 @@ async function sendMessage() {
   try {
     const historySnippet = rawHistory.slice(-12000);
     const systemPrompt = SYSTEM_PROMPT_BASE + historySnippet +
-      `\n\n【担当の名前】${tantoName}\n【担当の発言サンプル】\n` +
+      `\n\n【担当の名前】${tantoName}\n${window._tantoStyleInstruction || ''}\n【担当の発言サンプル】\n` +
       tantoMessages.slice(-50).join('\n');
 
     const apiMessages = chatMessages
