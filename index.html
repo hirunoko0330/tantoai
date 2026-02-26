@@ -792,20 +792,34 @@ function renderMessages() {
   container.innerHTML = '';
 
   for (const msg of chatMessages) {
-    const row = document.createElement('div');
-    row.className = `msg-row ${msg.role === 'user' ? 'user' : 'tanto'}`;
+    const lines = msg.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
     if (msg.role === 'tanto') {
-      row.innerHTML = `
-        <div class="msg-avatar">👤</div>
-        <div class="msg-bubble tanto">${escapeHtml(msg.content)}</div>
-      `;
+      // Avatar only on the first bubble
+      for (let i = 0; i < lines.length; i++) {
+        const row = document.createElement('div');
+        row.className = 'msg-row tanto';
+        if (i === 0) {
+          row.innerHTML = `
+            <div class="msg-avatar">👤</div>
+            <div class="msg-bubble tanto">${escapeHtml(lines[i])}</div>
+          `;
+        } else {
+          row.innerHTML = `
+            <div style="width:28px;flex-shrink:0;"></div>
+            <div class="msg-bubble tanto">${escapeHtml(lines[i])}</div>
+          `;
+        }
+        container.appendChild(row);
+      }
     } else {
-      row.innerHTML = `
-        <div class="msg-bubble user">${escapeHtml(msg.content)}</div>
-      `;
+      for (const line of lines) {
+        const row = document.createElement('div');
+        row.className = 'msg-row user';
+        row.innerHTML = `<div class="msg-bubble user">${escapeHtml(line)}</div>`;
+        container.appendChild(row);
+      }
     }
-    container.appendChild(row);
   }
 
   scrollToBottom();
@@ -861,7 +875,7 @@ async function sendMessage() {
   showTyping();
 
   try {
-    const historySnippet = rawHistory.slice(0, 12000);
+    const historySnippet = rawHistory.slice(-12000);
     const systemPrompt = SYSTEM_PROMPT_BASE + historySnippet +
       `\n\n【担当の名前】${tantoName}\n【担当の発言サンプル】\n` +
       tantoMessages.slice(-50).join('\n');
