@@ -771,18 +771,17 @@ function startChatWith(name) {
   document.getElementById('chatTantoName').textContent = name;
   document.getElementById('chatInput').placeholder = `${name}にメッセージ...`;
 
-  // Analyze message style
-  const avgLen = tantoMessages.reduce((sum, m) => sum + m.length, 0) / (tantoMessages.length || 1);
-  const multiLineRatio = tantoMessages.filter(m => m.includes('\n')).length / (tantoMessages.length || 1);
-  
-  let styleInstruction = '';
-  if (avgLen <= 20) {
-    styleInstruction = '【返信スタイル】短文でポンポン送るスタイル。1メッセージは10〜20文字程度。改行で複数に分けて送る。';
-  } else if (avgLen <= 50) {
-    styleInstruction = '【返信スタイル】中程度の長さ。1〜2文程度でテンポよく返す。';
-  } else {
-    styleInstruction = '【返信スタイル】長文スタイル。まとめて長めに返す。改行を使って読みやすくする。';
-  }
+  // Analyze message style by distribution
+  const total = tantoMessages.length || 1;
+  const short = tantoMessages.filter(m => m.length <= 15).length;
+  const mid   = tantoMessages.filter(m => m.length > 15 && m.length <= 50).length;
+  const long  = tantoMessages.filter(m => m.length > 50).length;
+  const shortPct = Math.round(short / total * 100);
+  const midPct   = Math.round(mid   / total * 100);
+  const longPct  = Math.round(long  / total * 100);
+
+  let styleInstruction = `【返信スタイル】この担当のメッセージ分布：短文(〜15文字)${shortPct}%・中文(16〜50文字)${midPct}%・長文(51文字〜)${longPct}%。この割合に近い頻度で短文・長文を使い分けること。`;
+
   window._tantoStyleInstruction = styleInstruction;
 
   // Get greeting
