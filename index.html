@@ -682,15 +682,34 @@ function parseLineChat(text) {
   const messages = [];
   const senderCounts = {};
 
-  const patterns = [
+  // Pattern for lines where date is on its own line:
+  // "00:38\t聖那くん\tゆみちゃん"
+  const msgLinePattern = /^(\d{1,2}:\d{2})\t(.+?)\t(.+)/;
+
+  // Pattern for all-in-one line formats (older exports):
+  const allInOnePatterns = [
     /^\[?(\d{4}[\/.]\d{1,2}[\/.]\d{1,2})[^\]]*\]?\s*[\d:]+\s+(.+?)\s*[:：]\s*(.+)/,
     /^(\d{4}[\/.]\d{1,2}[\/.]\d{1,2})[\(（].[）\)]\s*(\d{1,2}:\d{2})\s*[-ー]\s*(.+?)\s*[:：]\s*(.+)/,
     /^(\d{1,2}[\/.]\d{1,2})[\(（]?.*?[\)）]?\s*(\d{1,2}:\d{2})\t(.+?)\t(.+)/,
-    /^(\d{4}[\/.]\d{1,2}[\/.]\d{1,2})[\(（]?.*?[\)）]?\s*(\d{1,2}:\d{2})\t(.+?)\t(.+)/,
+    /^(\d{4}[\/.]\d{1,2}[\/.]\d{1,2})[\(（]?.*?[\)） ]\s*(\d{1,2}:\d{2})\t(.+?)\t(.+)/,
   ];
 
   for (const line of lines) {
-    for (const pattern of patterns) {
+    // Try the simple "time TAB sender TAB message" format first (iOS LINE export)
+    const m = line.match(msgLinePattern);
+    if (m) {
+      const sender = m[2].trim();
+      const msg = m[3].trim();
+      // Skip system messages like [スタンプ] [写真] [動画] etc
+      if (sender && msg && !msg.match(/^\[.+\]$/)) {
+        messages.push({ sender, message: msg });
+        senderCounts[sender] = (senderCounts[sender] || 0) + 1;
+      }
+      continue;
+    }
+
+    // Fallback: try all-in-one line patterns
+    for (const pattern of allInOnePatterns) {
       const match = line.match(pattern);
       if (match) {
         const parts = match.slice(1);
@@ -700,7 +719,7 @@ function parseLineChat(text) {
         } else if (parts.length === 4) {
           sender = parts[2]; msg = parts[3];
         }
-        if (sender && msg) {
+        if (sender && msg && !msg.match(/^\[.+\]$/)) {
           sender = sender.trim();
           msg = msg.trim();
           messages.push({ sender, message: msg });
