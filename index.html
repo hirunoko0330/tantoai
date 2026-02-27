@@ -259,6 +259,11 @@
   #chat {
     height: 100dvh;
     background: var(--chat-bg);
+    display: none;
+    flex-direction: column;
+  }
+  #chat.active {
+    display: flex;
   }
 
   .chat-header {
@@ -279,6 +284,7 @@
     flex-direction: column;
     gap: 6px;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .msg-row {
@@ -780,7 +786,23 @@ function startChatWith(name) {
   const midPct   = Math.round(mid   / total * 100);
   const longPct  = Math.round(long  / total * 100);
 
-  let styleInstruction = `【返信スタイル】この担当のメッセージ分布：短文(〜15文字)${shortPct}%・中文(16〜50文字)${midPct}%・長文(51文字〜)${longPct}%。この割合に近い頻度で短文・長文を使い分けること。`;
+  // Average character count per category
+  const avgShort = short > 0 ? Math.round(tantoMessages.filter(m => m.length <= 15).reduce((s, m) => s + m.length, 0) / short) : 8;
+  const avgMid   = mid   > 0 ? Math.round(tantoMessages.filter(m => m.length > 15 && m.length <= 50).reduce((s, m) => s + m.length, 0) / mid) : 30;
+  const avgLong  = long  > 0 ? Math.round(tantoMessages.filter(m => m.length > 50).reduce((s, m) => s + m.length, 0) / long) : 80;
+
+  // Dominant style for bubble splitting
+  window._tantoSplitBubbles = shortPct >= 60;
+
+  const styleInstruction = `【返信スタイル】
+この担当のメッセージ構成比：短文${shortPct}%・中文${midPct}%・長文${longPct}%。
+返信全体をこの割合で構成すること。
+- 短文(${shortPct}%)：約${avgShort}文字程度、改行で区切ってポンポン送るイメージ
+- 中文(${midPct}%)：約${avgMid}文字程度
+- 長文(${longPct}%)：約${avgLong}文字程度、まとめて1つの塊で送る
+短文パートは1文ごとに改行、長文パートは改行しないこと。`;
+
+  window._tantoStyleInstruction = styleInstruction;
 
   window._tantoStyleInstruction = styleInstruction;
 
@@ -804,7 +826,10 @@ function renderMessages() {
   container.innerHTML = '';
 
   for (const msg of chatMessages) {
-    const lines = msg.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const splitBubbles = window._tantoSplitBubbles !== false;
+    const lines = (msg.role === 'tanto' && !splitBubbles)
+      ? [msg.content.trim()].filter(l => l.length > 0)
+      : msg.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
     if (msg.role === 'tanto') {
       // Avatar only on the first bubble
