@@ -826,30 +826,42 @@ function renderMessages() {
   container.innerHTML = '';
 
   for (const msg of chatMessages) {
-    const splitBubbles = window._tantoSplitBubbles !== false;
-    const lines = (msg.role === 'tanto' && !splitBubbles)
-      ? [msg.content.trim()].filter(l => l.length > 0)
-      : msg.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
     if (msg.role === 'tanto') {
-      // Avatar only on the first bubble
-      for (let i = 0; i < lines.length; i++) {
+      // Split into multiple bubbles only if short-style (each line is short)
+      const lines = msg.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const isShortStyle = lines.length > 1 && lines.every(l => l.length <= 50);
+
+      if (isShortStyle) {
+        for (let i = 0; i < lines.length; i++) {
+          const row = document.createElement('div');
+          row.className = 'msg-row tanto';
+          if (i === 0) {
+            row.innerHTML = `
+              <div class="msg-avatar">👤</div>
+              <div class="msg-bubble tanto">${escapeHtml(lines[i])}</div>
+            `;
+          } else {
+            row.innerHTML = `
+              <div style="width:28px;flex-shrink:0;"></div>
+              <div class="msg-bubble tanto">${escapeHtml(lines[i])}</div>
+            `;
+          }
+          container.appendChild(row);
+        }
+      } else {
+        // Long message: one bubble, preserve line breaks as <br>
         const row = document.createElement('div');
         row.className = 'msg-row tanto';
-        if (i === 0) {
-          row.innerHTML = `
-            <div class="msg-avatar">👤</div>
-            <div class="msg-bubble tanto">${escapeHtml(lines[i])}</div>
-          `;
-        } else {
-          row.innerHTML = `
-            <div style="width:28px;flex-shrink:0;"></div>
-            <div class="msg-bubble tanto">${escapeHtml(lines[i])}</div>
-          `;
-        }
+        const htmlContent = lines.map(l => escapeHtml(l)).join('<br>');
+        row.innerHTML = `
+          <div class="msg-avatar">👤</div>
+          <div class="msg-bubble tanto" style="white-space:normal;">${htmlContent}</div>
+        `;
         container.appendChild(row);
       }
     } else {
+      const lines = msg.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
       for (const line of lines) {
         const row = document.createElement('div');
         row.className = 'msg-row user';
